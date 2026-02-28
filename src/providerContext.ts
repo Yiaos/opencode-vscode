@@ -9,6 +9,7 @@ import {
   buildSymbolContextPayload,
 } from "./contextPayload"
 import { parseFileReference, toFileReference, type LineRange } from "./fileReference"
+import { ATTACH_ACTION_ITEMS } from "./providerMenus"
 
 const execFileAsync = promisify(execFile)
 
@@ -161,15 +162,7 @@ export class ProviderContextActions {
   }
 
   async attachActions() {
-    const picked = await vscode.window.showQuickPick(
-      [
-        { label: "Attach Active File/Selection", id: "active" },
-        { label: "Attach Workspace File", id: "file" },
-        { label: "Attach Workspace Symbol", id: "symbol" },
-        { label: "Attach Git Diff", id: "diff" },
-      ],
-      { title: "OpenCode Attach Context" },
-    )
+    const picked = await vscode.window.showQuickPick(ATTACH_ACTION_ITEMS, { title: "OpenCode Attach Context" })
     if (!picked) return
     if (picked.id === "active") return this.sendActiveContext()
     if (picked.id === "file") return this.attachFileContext()

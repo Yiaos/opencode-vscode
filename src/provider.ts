@@ -26,6 +26,7 @@ import {
 } from "./constants"
 import type { ServerAuth } from "./opencodeApi"
 import { ProviderContextActions } from "./providerContext"
+import { SESSION_ACTION_ITEMS } from "./providerMenus"
 import { ProviderSessionActions } from "./providerSessions"
 import { ServerManager } from "./serverManager"
 import { buildSessionUrl, parseSessionUrl, type SessionInfo } from "./sessionUrl"
@@ -145,23 +146,7 @@ export class OpencodeGuiViewProvider implements vscode.WebviewViewProvider, vsco
   }
 
   async sessionActionsMenu() {
-    const picked = await vscode.window.showQuickPick(
-      [
-        { label: "New Session", id: "new" },
-        { label: "Switch Session", id: "switch" },
-        { label: "Compact Session", id: "compact" },
-        { label: "Attach File Context", id: "attach-file" },
-        { label: "Attach Symbol Context", id: "attach-symbol" },
-        { label: "Attach Git Diff Context", id: "attach-diff" },
-        { label: "Rename Session", id: "rename" },
-        { label: "Fork Session", id: "fork" },
-        { label: "Share Session", id: "share" },
-        { label: "Unshare Session", id: "unshare" },
-        { label: "Stop Session", id: "stop" },
-        { label: "Delete Session", id: "delete" },
-      ],
-      { title: "OpenCode Session Actions" },
-    )
+    const picked = await vscode.window.showQuickPick(SESSION_ACTION_ITEMS, { title: "OpenCode Session Actions" })
     if (!picked) return
     if (picked.id === "new") return this.sessions.newSession()
     if (picked.id === "switch") return this.sessions.switchSession()
