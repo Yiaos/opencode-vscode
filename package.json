@@ -406,7 +406,7 @@
     "prepare": "npm run setup:hooks",
     "compile": "tsc --noEmit && node esbuild.js",
     "package": "tsc --noEmit && node esbuild.js --production",
-    "package:vsix": "vsce package --allow-missing-repository --no-dependencies -o .artifacts/opencode-gui-vscode.vsix",
+    "package:vsix": "mkdir -p .artifacts && vsce package --allow-missing-repository --no-dependencies -o .artifacts/opencode-gui-vscode.vsix",
     "watch": "node esbuild.js --watch",
     "watch:verify-install": "bash ./scripts/watch-verify-install.sh",
     "test": "tsc --project tsconfig.json --outDir out && node --test out/test/*.test.js",
