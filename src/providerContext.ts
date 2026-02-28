@@ -10,6 +10,7 @@ import {
 } from "./contextPayload"
 import { parseFileReference, toFileReference, type LineRange } from "./fileReference"
 import { ATTACH_ACTION_ITEMS } from "./providerMenus"
+import { toWorkspaceRelativePath } from "./workspacePath"
 
 const execFileAsync = promisify(execFile)
 
@@ -247,10 +248,12 @@ function normalizeRelativePath(input: string) {
 }
 
 async function resolveWorkspaceUri(relativePath: string) {
+  const safeRelative = toWorkspaceRelativePath(relativePath)
+  if (!safeRelative) return
   const folders = vscode.workspace.workspaceFolders
   if (!folders || folders.length === 0) return
   for (const folder of folders) {
-    const uri = vscode.Uri.joinPath(folder.uri, relativePath)
+    const uri = vscode.Uri.joinPath(folder.uri, safeRelative)
     try {
       await vscode.workspace.fs.stat(uri)
       return uri

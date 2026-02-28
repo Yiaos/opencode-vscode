@@ -149,7 +149,22 @@ export function createWebviewHtml(input: {
     };
 
     const saved = vscode.getState();
-    const initial = saved && saved.url ? saved.url : ${JSON.stringify(frameUrl)};
+    const toInitialUrl = () => {
+      const current = ${JSON.stringify(frameUrl)};
+      if (!saved || typeof saved.url !== "string") return current;
+      try {
+        const next = new URL(current);
+        const prev = new URL(saved.url);
+        if (!prev.pathname.includes("/session/")) return current;
+        next.pathname = prev.pathname;
+        next.search = prev.search;
+        next.hash = prev.hash;
+        return next.toString();
+      } catch {
+        return current;
+      }
+    };
+    const initial = toInitialUrl();
     setFrame(initial);
 
     frame.addEventListener("load", () => {
@@ -162,6 +177,7 @@ export function createWebviewHtml(input: {
     });
 
     window.addEventListener("message", async (event) => {
+      if (event.source === frame.contentWindow) return;
       const message = event.data;
       if (!message || typeof message !== "object") return;
 
