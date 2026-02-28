@@ -1,0 +1,5 @@
+.vscode/**
+out/**
+src/**
+**/*.test.ts
+**/*.map

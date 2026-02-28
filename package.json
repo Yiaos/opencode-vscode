@@ -1,0 +1,352 @@
+{
+  "name": "opencode-gui-vscode",
+  "displayName": "OpenCode GUI",
+  "description": "Standalone OpenCode GUI extension for VS Code with full Web capabilities",
+  "version": "0.1.0",
+  "publisher": "local",
+  "license": "MIT",
+  "icon": "resources/opencode.svg",
+  "engines": {
+    "vscode": "^1.94.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onView:opencodeGui.view",
+    "onCommand:opencodeGui.open",
+    "onCommand:opencodeGui.newSession",
+    "onCommand:opencodeGui.refresh",
+    "onCommand:opencodeGui.copyFileReference",
+    "onCommand:opencodeGui.sendContextToSession",
+    "onCommand:opencodeGui.abortActiveSession",
+    "onCommand:opencodeGui.openReferenceInEditor",
+    "onCommand:opencodeGui.openPanel",
+    "onCommand:opencodeGui.switchSession",
+    "onCommand:opencodeGui.sessionActions",
+    "onCommand:opencodeGui.renameSession",
+    "onCommand:opencodeGui.deleteSession",
+    "onCommand:opencodeGui.forkSession",
+    "onCommand:opencodeGui.shareSession",
+    "onCommand:opencodeGui.unshareSession",
+    "onCommand:opencodeGui.compactSession",
+    "onCommand:opencodeGui.attachFileContext",
+    "onCommand:opencodeGui.attachExplorerFileContext",
+    "onCommand:opencodeGui.attachSymbolContext",
+    "onCommand:opencodeGui.attachGitDiffContext"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "opencodeGui.open",
+        "title": "OpenCode GUI: Open"
+      },
+      {
+        "command": "opencodeGui.openPanel",
+        "title": "OpenCode GUI: Open Panel"
+      },
+      {
+        "command": "opencodeGui.newSession",
+        "title": "OpenCode GUI: New Session"
+      },
+      {
+        "command": "opencodeGui.switchSession",
+        "title": "OpenCode GUI: Switch Session"
+      },
+      {
+        "command": "opencodeGui.sessionActions",
+        "title": "OpenCode GUI: Session Actions"
+      },
+      {
+        "command": "opencodeGui.renameSession",
+        "title": "OpenCode GUI: Rename Session"
+      },
+      {
+        "command": "opencodeGui.deleteSession",
+        "title": "OpenCode GUI: Delete Session"
+      },
+      {
+        "command": "opencodeGui.forkSession",
+        "title": "OpenCode GUI: Fork Session"
+      },
+      {
+        "command": "opencodeGui.shareSession",
+        "title": "OpenCode GUI: Share Session"
+      },
+      {
+        "command": "opencodeGui.unshareSession",
+        "title": "OpenCode GUI: Unshare Session"
+      },
+      {
+        "command": "opencodeGui.compactSession",
+        "title": "OpenCode GUI: Compact Session"
+      },
+      {
+        "command": "opencodeGui.attachFileContext",
+        "title": "OpenCode GUI: Attach File Context"
+      },
+      {
+        "command": "opencodeGui.attachExplorerFileContext",
+        "title": "OpenCode GUI: Attach Explorer File Context"
+      },
+      {
+        "command": "opencodeGui.attachSymbolContext",
+        "title": "OpenCode GUI: Attach Symbol Context"
+      },
+      {
+        "command": "opencodeGui.attachGitDiffContext",
+        "title": "OpenCode GUI: Attach Git Diff Context"
+      },
+      {
+        "command": "opencodeGui.refresh",
+        "title": "OpenCode GUI: Refresh"
+      },
+      {
+        "command": "opencodeGui.copyFileReference",
+        "title": "OpenCode GUI: Copy Active File Reference"
+      },
+      {
+        "command": "opencodeGui.sendContextToSession",
+        "title": "OpenCode GUI: Send Active Context"
+      },
+      {
+        "command": "opencodeGui.abortActiveSession",
+        "title": "OpenCode GUI: Abort Active Session"
+      },
+      {
+        "command": "opencodeGui.openReferenceInEditor",
+        "title": "OpenCode GUI: Open File Reference In Editor"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "opencodeGui",
+          "title": "OpenCode",
+          "icon": "resources/opencode.svg"
+        }
+      ]
+    },
+    "views": {
+      "opencodeGui": [
+        {
+          "id": "opencodeGui.view",
+          "name": "OpenCode GUI",
+          "type": "webview"
+        }
+      ]
+    },
+    "menus": {
+      "view/title": [
+        {
+          "command": "opencodeGui.sessionActions",
+          "when": "view == opencodeGui.view",
+          "group": "navigation@1"
+        },
+        {
+          "command": "opencodeGui.newSession",
+          "when": "view == opencodeGui.view",
+          "group": "navigation@2"
+        },
+        {
+          "command": "opencodeGui.switchSession",
+          "when": "view == opencodeGui.view",
+          "group": "navigation@3"
+        },
+        {
+          "command": "opencodeGui.attachFileContext",
+          "when": "view == opencodeGui.view",
+          "group": "navigation@4"
+        },
+        {
+          "command": "opencodeGui.compactSession",
+          "when": "view == opencodeGui.view",
+          "group": "navigation@5"
+        },
+        {
+          "command": "opencodeGui.refresh",
+          "when": "view == opencodeGui.view",
+          "group": "navigation@6"
+        },
+        {
+          "command": "opencodeGui.copyFileReference",
+          "when": "view == opencodeGui.view",
+          "group": "navigation@7"
+        },
+        {
+          "command": "opencodeGui.sendContextToSession",
+          "when": "view == opencodeGui.view",
+          "group": "navigation@8"
+        },
+        {
+          "command": "opencodeGui.abortActiveSession",
+          "when": "view == opencodeGui.view",
+          "group": "navigation@9"
+        },
+        {
+          "command": "opencodeGui.openReferenceInEditor",
+          "when": "view == opencodeGui.view",
+          "group": "navigation@10"
+        }
+      ],
+      "editor/context": [
+        {
+          "command": "opencodeGui.sendContextToSession",
+          "group": "navigation@1"
+        },
+        {
+          "command": "opencodeGui.copyFileReference",
+          "group": "navigation@2"
+        }
+      ],
+      "explorer/context": [
+        {
+          "command": "opencodeGui.attachExplorerFileContext",
+          "when": "explorerResourceIsFolder == false",
+          "group": "navigation@1"
+        }
+      ]
+    },
+    "keybindings": [
+      {
+        "command": "opencodeGui.open",
+        "key": "cmd+escape",
+        "mac": "cmd+escape",
+        "win": "ctrl+escape",
+        "linux": "ctrl+escape"
+      },
+      {
+        "command": "opencodeGui.newSession",
+        "key": "cmd+shift+escape",
+        "mac": "cmd+shift+escape",
+        "win": "ctrl+shift+escape",
+        "linux": "ctrl+shift+escape"
+      },
+      {
+        "command": "opencodeGui.switchSession",
+        "key": "cmd+shift+o",
+        "mac": "cmd+shift+o",
+        "win": "ctrl+shift+o",
+        "linux": "ctrl+shift+o"
+      },
+      {
+        "command": "opencodeGui.sessionActions",
+        "key": "cmd+shift+a",
+        "mac": "cmd+shift+a",
+        "win": "ctrl+shift+a",
+        "linux": "ctrl+shift+a"
+      },
+      {
+        "command": "opencodeGui.attachFileContext",
+        "key": "cmd+alt+f",
+        "mac": "cmd+alt+f",
+        "win": "ctrl+alt+f",
+        "linux": "ctrl+alt+f"
+      },
+      {
+        "command": "opencodeGui.attachSymbolContext",
+        "key": "cmd+alt+s",
+        "mac": "cmd+alt+s",
+        "win": "ctrl+alt+s",
+        "linux": "ctrl+alt+s"
+      },
+      {
+        "command": "opencodeGui.attachGitDiffContext",
+        "key": "cmd+alt+d",
+        "mac": "cmd+alt+d",
+        "win": "ctrl+alt+d",
+        "linux": "ctrl+alt+d"
+      },
+      {
+        "command": "opencodeGui.compactSession",
+        "key": "cmd+alt+m",
+        "mac": "cmd+alt+m",
+        "win": "ctrl+alt+m",
+        "linux": "ctrl+alt+m"
+      },
+      {
+        "command": "opencodeGui.copyFileReference",
+        "key": "cmd+alt+k",
+        "mac": "cmd+alt+k",
+        "win": "ctrl+alt+k",
+        "linux": "ctrl+alt+k"
+      },
+      {
+        "command": "opencodeGui.sendContextToSession",
+        "key": "cmd+alt+enter",
+        "mac": "cmd+alt+enter",
+        "win": "ctrl+alt+enter",
+        "linux": "ctrl+alt+enter"
+      },
+      {
+        "command": "opencodeGui.abortActiveSession",
+        "key": "cmd+alt+.",
+        "mac": "cmd+alt+.",
+        "win": "ctrl+alt+.",
+        "linux": "ctrl+alt+."
+      },
+      {
+        "command": "opencodeGui.openReferenceInEditor",
+        "key": "cmd+alt+o",
+        "mac": "cmd+alt+o",
+        "win": "ctrl+alt+o",
+        "linux": "ctrl+alt+o"
+      },
+      {
+        "command": "opencodeGui.openPanel",
+        "key": "cmd+alt+p",
+        "mac": "cmd+alt+p",
+        "win": "ctrl+alt+p",
+        "linux": "ctrl+alt+p"
+      }
+    ],
+    "configuration": {
+      "title": "OpenCode GUI",
+      "properties": {
+        "opencodeGui.opencodePath": {
+          "type": "string",
+          "default": "opencode",
+          "description": "Path to opencode executable"
+        },
+        "opencodeGui.serveArgs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "description": "Extra arguments passed to 'opencode serve'"
+        },
+        "opencodeGui.startTimeoutMs": {
+          "type": "number",
+          "default": 20000,
+          "minimum": 2000,
+          "description": "Timeout in milliseconds when starting local opencode server"
+        },
+        "opencodeGui.serverUsername": {
+          "type": "string",
+          "default": "",
+          "description": "Optional username when OPENCODE server auth is enabled"
+        },
+        "opencodeGui.serverPassword": {
+          "type": "string",
+          "default": "",
+          "description": "Optional password when OPENCODE server auth is enabled"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run package",
+    "compile": "tsc --noEmit && node esbuild.js",
+    "package": "tsc --noEmit && node esbuild.js --production",
+    "watch": "node esbuild.js --watch",
+    "test": "tsc --project tsconfig.json --outDir out && node --test out/test/*.test.js"
+  },
+  "devDependencies": {
+    "@types/node": "20.x",
+    "@types/vscode": "^1.94.0",
+    "esbuild": "^0.25.3",
+    "typescript": "^5.8.3"
+  }
+}
