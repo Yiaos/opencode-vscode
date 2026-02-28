@@ -39,6 +39,7 @@ import { ServerEventsClient, type GlobalEventEnvelope } from "./serverEvents"
 import { buildSessionUrl, parseSessionUrl, type SessionInfo } from "./sessionUrl"
 import { buildStatusBarState, type SessionRuntimeState } from "./statusBarState"
 import { createNonce, createWebviewHtml } from "./webviewHtml"
+import { dispatchWebviewMessage } from "./webviewMessageRouter"
 
 export class OpencodeGuiViewProvider implements vscode.WebviewViewProvider, vscode.Disposable {
   private static readonly ACTIVE_SESSION_KEY = "opencodeGui.activeSession"
@@ -245,55 +246,29 @@ export class OpencodeGuiViewProvider implements vscode.WebviewViewProvider, vsco
     if (this.attachedWebviews.has(webview)) return
     this.attachedWebviews.add(webview)
     webview.onDidReceiveMessage((message) => {
-      if (!message || typeof message !== "object") return
-      if (message.type === "ready") {
-        const url = String(message.url ?? "")
-        this.output.appendLine(`[webview] ready: ${url}`)
-        const session = parseSessionUrl(url)
-        if (session) this.setActiveSession(session)
-      }
-      if (message.type === "action-new-session") {
-        void this.sessions.newSession()
-      }
-      if (message.type === "action-session-menu") {
-        void this.sessionActionsMenu()
-      }
-      if (message.type === "action-review-permissions") {
-        void this.reviewPermissions()
-      }
-      if (message.type === "action-attach-menu") {
-        void this.contextActions.attachActions()
-      }
-      if (message.type === "action-send-context") {
-        void this.contextActions.sendActiveContext()
-      }
-      if (message.type === "action-switch-session") {
-        void this.sessions.switchSession()
-      }
-      if (message.type === "action-show-todo") {
-        void this.sessions.showSessionTodo()
-      }
-      if (message.type === "action-show-diff") {
-        void this.sessions.showSessionDiff()
-      }
-      if (message.type === "action-run-command") {
-        void this.sessions.runSessionCommandAction()
-      }
-      if (message.type === "action-run-shell") {
-        void this.sessions.runSessionShellAction()
-      }
-      if (message.type === "action-abort-session") {
-        void this.sessions.abortActiveSession()
-      }
-      if (message.type === "action-open-reference") {
-        void this.contextActions.openReferenceInEditor()
-      }
-      if (message.type === "action-refresh") {
-        void this.refresh()
-      }
-      if (message.type === "frame-error") {
-        void vscode.window.showErrorMessage("OpenCode GUI frame failed to load")
-      }
+      dispatchWebviewMessage(message, {
+        onReady: (url) => {
+          this.output.appendLine(`[webview] ready: ${url}`)
+          const session = parseSessionUrl(url)
+          if (session) this.setActiveSession(session)
+        },
+        onNewSession: () => void this.sessions.newSession(),
+        onSessionMenu: () => void this.sessionActionsMenu(),
+        onReviewPermissions: () => void this.reviewPermissions(),
+        onAttachMenu: () => void this.contextActions.attachActions(),
+        onSendContext: () => void this.contextActions.sendActiveContext(),
+        onPrompt: (text) => void this.sessions.sendPrompt(text),
+        onSwitchSession: () => void this.sessions.switchSession(),
+        onOpenPanel: () => void this.openPanel(),
+        onShowTodo: () => void this.sessions.showSessionTodo(),
+        onShowDiff: () => void this.sessions.showSessionDiff(),
+        onRunCommand: () => void this.sessions.runSessionCommandAction(),
+        onRunShell: () => void this.sessions.runSessionShellAction(),
+        onAbortSession: () => void this.sessions.abortActiveSession(),
+        onOpenReference: () => void this.contextActions.openReferenceInEditor(),
+        onRefresh: () => void this.refresh(),
+        onFrameError: () => void vscode.window.showErrorMessage("OpenCode GUI frame failed to load"),
+      })
     })
   }
 

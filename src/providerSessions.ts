@@ -29,6 +29,13 @@ type CompactionModel = {
   modelID: string
 }
 
+type PromptSessionState = {
+  serverUrl: string
+  auth?: ServerAuth
+  session: SessionInfo
+  directory?: string
+}
+
 export type ProviderSessionHost = {
   ensureServerRunning(): Promise<string>
   serverAuth(): ServerAuth | undefined
@@ -450,35 +457,27 @@ export class ProviderSessionActions {
     }
   }
 
+  async sendPrompt(text: string) {
+    const prompt = text.trim()
+    if (!prompt) return
+
+    try {
+      const state = await this.ensurePromptSession()
+      await this.sendPromptText(state, prompt)
+      this.host.setActiveSession(state.session)
+      await this.host.navigateWebviews(buildSessionUrl(state.serverUrl, state.session))
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      await vscode.window.showErrorMessage(`Failed to send prompt: ${message}`)
+    }
+  }
+
   async sendTextContext(text: string, successMessage: string) {
     await this.host.open()
 
     try {
       const state = await this.ensurePromptSession()
-      const send = async (target: SessionInfo) => {
-        await promptSessionWithText({
-          serverUrl: state.serverUrl,
-          auth: state.auth,
-          directory: target.directory,
-          sessionID: target.id,
-          text,
-        })
-      }
-
-      try {
-        await send(state.session)
-      } catch (error) {
-        const message = error instanceof Error ? error.message : String(error)
-        if (!message.includes("HTTP 404")) throw error
-        const created = await createSession({
-          serverUrl: state.serverUrl,
-          auth: state.auth,
-          directory: state.directory,
-        })
-        state.session = { id: created.id, directory: created.directory }
-        await send(state.session)
-      }
-
+      await this.sendPromptText(state, text)
       this.host.setActiveSession(state.session)
       await this.host.navigateWebviews(buildSessionUrl(state.serverUrl, state.session))
       await vscode.window.showInformationMessage(successMessage)
@@ -563,7 +562,7 @@ export class ProviderSessionActions {
     }
   }
 
-  private async ensurePromptSession() {
+  private async ensurePromptSession(): Promise<PromptSessionState> {
     const serverUrl = await this.host.ensureServerRunning()
     const auth = this.host.serverAuth()
     const directory = this.host.defaultDirectory()
@@ -586,5 +585,31 @@ export class ProviderSessionActions {
     }
 
     return { serverUrl, auth, session, directory }
+  }
+
+  private async sendPromptText(state: PromptSessionState, text: string) {
+    const send = async (target: SessionInfo) => {
+      await promptSessionWithText({
+        serverUrl: state.serverUrl,
+        auth: state.auth,
+        directory: target.directory,
+        sessionID: target.id,
+        text,
+      })
+    }
+
+    try {
+      await send(state.session)
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      if (!message.includes("HTTP 404")) throw error
+      const created = await createSession({
+        serverUrl: state.serverUrl,
+        auth: state.auth,
+        directory: state.directory,
+      })
+      state.session = { id: created.id, directory: created.directory }
+      await send(state.session)
+    }
   }
 }

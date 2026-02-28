@@ -22,6 +22,20 @@ function runWebviewScript(serverUrl: string, savedState?: unknown) {
   const postMessages: unknown[] = []
   let messageHandler: ((event: unknown) => Promise<void>) | undefined
 
+  const createClickable = () => ({
+    handlers: new Map<string, ((event?: unknown) => void)[]>(),
+    addEventListener(type: string, handler: (event?: unknown) => void) {
+      const list = this.handlers.get(type) || []
+      list.push(handler)
+      this.handlers.set(type, list)
+    },
+    trigger(type: string, event?: unknown) {
+      for (const handler of this.handlers.get(type) || []) {
+        handler(event)
+      }
+    },
+  })
+
   const frame = {
     src: "",
     contentWindow: {
@@ -32,23 +46,30 @@ function runWebviewScript(serverUrl: string, savedState?: unknown) {
     addEventListener: () => undefined,
   }
   const status = { textContent: "" }
-  const button = { addEventListener: () => undefined }
+  const sessionTitle = { textContent: "" }
+  const promptInput = createClickable() as ReturnType<typeof createClickable> & { value: string }
+  promptInput.value = ""
+  const button = createClickable()
   const elements = new Map<string, unknown>([
     ["frame", frame],
     ["status", status],
-    ["new-session", button],
-    ["session-menu", button],
-    ["review-permissions", button],
-    ["attach-menu", button],
-    ["switch-session", button],
-    ["show-todo", button],
-    ["show-diff", button],
-    ["run-command", button],
-    ["run-shell", button],
-    ["send-context", button],
-    ["abort-session", button],
-    ["open-reference", button],
-    ["refresh", button],
+    ["session-title", sessionTitle],
+    ["prompt-input", promptInput],
+    ["action-refresh", button],
+    ["action-session-menu", button],
+    ["action-review-permissions", button],
+    ["action-open-panel", button],
+    ["action-attach-menu", button],
+    ["action-new-session", button],
+    ["action-switch-session", button],
+    ["action-send-context", button],
+    ["action-show-todo", button],
+    ["action-show-diff", button],
+    ["action-run-command", button],
+    ["action-run-shell", button],
+    ["action-open-reference", button],
+    ["action-abort-session", button],
+    ["action-send-prompt", button],
   ])
 
   const context = {
@@ -73,6 +94,8 @@ function runWebviewScript(serverUrl: string, savedState?: unknown) {
   return {
     frame,
     status,
+    sessionTitle,
+    promptInput,
     setStateCalls,
     postMessages,
     async postWindowMessage(event: unknown) {
@@ -92,20 +115,23 @@ test("createWebviewHtml: injects server url and nonce", () => {
   assert.ok(html.includes("http://127.0.0.1:4096"))
   assert.ok(html.includes("script-src 'nonce-nonce123'"))
   assert.ok(html.includes("frame-src http://localhost:* http://127.0.0.1:*"))
-  assert.ok(html.includes("id=\"session-menu\""))
-  assert.ok(html.includes("id=\"review-permissions\""))
-  assert.ok(html.includes("id=\"attach-menu\""))
-  assert.ok(html.includes("id=\"new-session\""))
-  assert.ok(html.includes("id=\"switch-session\""))
-  assert.ok(html.includes("id=\"show-todo\""))
-  assert.ok(html.includes("id=\"show-diff\""))
-  assert.ok(html.includes("id=\"run-command\""))
-  assert.ok(html.includes("id=\"run-shell\""))
-  assert.ok(html.includes("id=\"send-context\""))
-  assert.ok(html.includes("id=\"abort-session\""))
-  assert.ok(html.includes("id=\"open-reference\""))
+  assert.ok(html.includes("id=\"action-session-menu\""))
+  assert.ok(html.includes("id=\"action-review-permissions\""))
+  assert.ok(html.includes("id=\"action-attach-menu\""))
+  assert.ok(html.includes("id=\"action-new-session\""))
+  assert.ok(html.includes("id=\"action-switch-session\""))
+  assert.ok(html.includes("id=\"action-show-todo\""))
+  assert.ok(html.includes("id=\"action-show-diff\""))
+  assert.ok(html.includes("id=\"action-run-command\""))
+  assert.ok(html.includes("id=\"action-run-shell\""))
+  assert.ok(html.includes("id=\"action-send-context\""))
+  assert.ok(html.includes("id=\"action-abort-session\""))
+  assert.ok(html.includes("id=\"action-open-reference\""))
+  assert.ok(html.includes("id=\"action-send-prompt\""))
   assert.ok(html.includes("if (event.source === frame.contentWindow) return;"))
   assert.ok(html.includes("if (!prev.pathname.includes(\"/session/\")) return current;"))
+  assert.ok(html.includes("grid-template-rows: auto minmax(0, 1fr) auto auto;"))
+  assert.ok(html.includes("overflow-x: auto;"))
 })
 
 test("createWebviewHtml: escapes title", () => {
@@ -128,6 +154,7 @@ test("createWebviewHtml script: keeps current host/port and restores session rou
   assert.equal(harness.frame.src, "http://127.0.0.1:4096/session/s1?tab=chat#bottom")
   const firstState = harness.setStateCalls[0] as { url?: string } | undefined
   assert.equal(firstState?.url, "http://127.0.0.1:4096/session/s1?tab=chat#bottom")
+  assert.equal(harness.sessionTitle.textContent, "s1")
 })
 
 test("createWebviewHtml script: ignores navigate messages from iframe source", async () => {
@@ -147,4 +174,20 @@ test("createWebviewHtml script: ignores navigate messages from iframe source", a
   })
   assert.equal(harness.frame.src, "http://127.0.0.1:4096/session/safe")
   assert.equal(harness.setStateCalls.length, 2)
+})
+
+test("createWebviewHtml script: sends prompt on Enter", () => {
+  const harness = runWebviewScript("http://127.0.0.1:4096")
+  harness.promptInput.value = "hello opencode"
+
+  harness.promptInput.trigger("keydown", {
+    key: "Enter",
+    shiftKey: false,
+    preventDefault: () => undefined,
+  })
+
+  const last = harness.postMessages[harness.postMessages.length - 1] as { type?: string; text?: string } | undefined
+  assert.equal(last?.type, "action-prompt")
+  assert.equal(last?.text, "hello opencode")
+  assert.equal(harness.promptInput.value, "")
 })

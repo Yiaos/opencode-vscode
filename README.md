@@ -6,7 +6,9 @@ A standalone GUI extension located in `vsocode`.
 
 - Starts and manages a local `opencode serve` process.
 - Embeds the full OpenCode Web UI in a VS Code Webview.
-- Provides codex-style top action bar (`Session/Approvals/Attach/New/Switch/Todo/Diff/Slash/Shell/Stop`).
+- Provides codex-style shell UI:
+  - Minimal top actions (`Switch/Refresh/Session Menu/Approvals/Open Panel`)
+  - Bottom composer with prompt send (`Enter`), quick chips (`Attach/Context/Todo/Diff/Slash/Shell/Stop`)
 - Supports core commands:
   - Open GUI
   - Open GUI in floating panel
@@ -24,6 +26,10 @@ A standalone GUI extension located in `vsocode`.
   - Send active file/selection context to OpenCode session
   - Abort active OpenCode session
   - Open `@file#Lx-y` reference directly in VS Code editor
+
+## Acceptance Checklist
+
+- Codex 交互一致性验收清单：`docs/codex-parity-checklist.md`
 
 ## Implementation Overview
 
