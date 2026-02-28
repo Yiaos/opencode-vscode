@@ -9,6 +9,7 @@ test("SESSION_ACTION_ITEMS: contains expected order and action ids", () => {
       "new",
       "switch",
       "compact",
+      "review-permissions",
       "attach-file",
       "attach-symbol",
       "attach-diff",

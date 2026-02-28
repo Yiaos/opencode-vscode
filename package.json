@@ -23,6 +23,7 @@
     "onCommand:opencodeGui.openReferenceInEditor",
     "onCommand:opencodeGui.openPanel",
     "onCommand:opencodeGui.switchSession",
+    "onCommand:opencodeGui.reviewPermissions",
     "onCommand:opencodeGui.sessionActions",
     "onCommand:opencodeGui.renameSession",
     "onCommand:opencodeGui.deleteSession",
@@ -53,6 +54,10 @@
       {
         "command": "opencodeGui.switchSession",
         "title": "OpenCode GUI: Switch Session"
+      },
+      {
+        "command": "opencodeGui.reviewPermissions",
+        "title": "OpenCode GUI: Review Pending Permissions"
       },
       {
         "command": "opencodeGui.sessionActions",
@@ -155,39 +160,44 @@
           "group": "navigation@3"
         },
         {
-          "command": "opencodeGui.attachFileContext",
+          "command": "opencodeGui.reviewPermissions",
           "when": "view == opencodeGui.view",
           "group": "navigation@4"
         },
         {
-          "command": "opencodeGui.compactSession",
+          "command": "opencodeGui.attachFileContext",
           "when": "view == opencodeGui.view",
           "group": "navigation@5"
         },
         {
-          "command": "opencodeGui.refresh",
+          "command": "opencodeGui.compactSession",
           "when": "view == opencodeGui.view",
           "group": "navigation@6"
         },
         {
-          "command": "opencodeGui.copyFileReference",
+          "command": "opencodeGui.refresh",
           "when": "view == opencodeGui.view",
           "group": "navigation@7"
         },
         {
-          "command": "opencodeGui.sendContextToSession",
+          "command": "opencodeGui.copyFileReference",
           "when": "view == opencodeGui.view",
           "group": "navigation@8"
         },
         {
-          "command": "opencodeGui.abortActiveSession",
+          "command": "opencodeGui.sendContextToSession",
           "when": "view == opencodeGui.view",
           "group": "navigation@9"
         },
         {
-          "command": "opencodeGui.openReferenceInEditor",
+          "command": "opencodeGui.abortActiveSession",
           "when": "view == opencodeGui.view",
           "group": "navigation@10"
+        },
+        {
+          "command": "opencodeGui.openReferenceInEditor",
+          "when": "view == opencodeGui.view",
+          "group": "navigation@11"
         }
       ],
       "editor/context": [
@@ -236,6 +246,13 @@
         "mac": "cmd+shift+a",
         "win": "ctrl+shift+a",
         "linux": "ctrl+shift+a"
+      },
+      {
+        "command": "opencodeGui.reviewPermissions",
+        "key": "cmd+shift+r",
+        "mac": "cmd+shift+r",
+        "win": "ctrl+shift+r",
+        "linux": "ctrl+shift+r"
       },
       {
         "command": "opencodeGui.attachFileContext",

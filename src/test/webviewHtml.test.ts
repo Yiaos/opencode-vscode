@@ -14,6 +14,7 @@ test("createWebviewHtml: injects server url and nonce", () => {
   assert.ok(html.includes("script-src 'nonce-nonce123'"))
   assert.ok(html.includes("frame-src http://localhost:* http://127.0.0.1:*"))
   assert.ok(html.includes("id=\"session-menu\""))
+  assert.ok(html.includes("id=\"review-permissions\""))
   assert.ok(html.includes("id=\"attach-menu\""))
   assert.ok(html.includes("id=\"new-session\""))
   assert.ok(html.includes("id=\"switch-session\""))

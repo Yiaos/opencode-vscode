@@ -12,6 +12,7 @@ import {
   COMMAND_NEW_SESSION,
   COMMAND_OPEN_REFERENCE,
   COMMAND_RENAME_SESSION,
+  COMMAND_REVIEW_PERMISSIONS,
   COMMAND_OPEN_PANEL,
   COMMAND_OPEN,
   COMMAND_REFRESH,
@@ -151,6 +152,7 @@ export class OpencodeGuiViewProvider implements vscode.WebviewViewProvider, vsco
     if (picked.id === "new") return this.sessions.newSession()
     if (picked.id === "switch") return this.sessions.switchSession()
     if (picked.id === "compact") return this.sessions.compactSession()
+    if (picked.id === "review-permissions") return this.sessions.reviewPermissions()
     if (picked.id === "attach-file") return this.contextActions.attachFileContext()
     if (picked.id === "attach-symbol") return this.contextActions.attachSymbolContext()
     if (picked.id === "attach-diff") return this.contextActions.attachGitDiffContext()
@@ -169,6 +171,7 @@ export class OpencodeGuiViewProvider implements vscode.WebviewViewProvider, vsco
       vscode.commands.registerCommand(COMMAND_REFRESH, async () => this.refresh()),
       vscode.commands.registerCommand(COMMAND_NEW_SESSION, async () => this.sessions.newSession()),
       vscode.commands.registerCommand(COMMAND_SWITCH_SESSION, async () => this.sessions.switchSession()),
+      vscode.commands.registerCommand(COMMAND_REVIEW_PERMISSIONS, async () => this.sessions.reviewPermissions()),
       vscode.commands.registerCommand(COMMAND_SESSION_ACTIONS, async () => this.sessionActionsMenu()),
       vscode.commands.registerCommand(COMMAND_RENAME_SESSION, async () => this.sessions.renameSession()),
       vscode.commands.registerCommand(COMMAND_DELETE_SESSION, async () => this.sessions.deleteSession()),
@@ -231,6 +234,9 @@ export class OpencodeGuiViewProvider implements vscode.WebviewViewProvider, vsco
       }
       if (message.type === "action-session-menu") {
         void this.sessionActionsMenu()
+      }
+      if (message.type === "action-review-permissions") {
+        void this.sessions.reviewPermissions()
       }
       if (message.type === "action-attach-menu") {
         void this.contextActions.attachActions()

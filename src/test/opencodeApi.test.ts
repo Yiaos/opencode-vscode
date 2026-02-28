@@ -4,7 +4,9 @@ import {
   createAuthHeader,
   forkSession,
   listConfigProviders,
+  listPermissions,
   pickActiveSession,
+  replyPermission,
   removeSession,
   renameSession,
   shareSession,
@@ -173,5 +175,58 @@ test("summarizeSession API: calls expected route with model payload", async () =
     providerID: "openai",
     modelID: "gpt-5",
     auto: false,
+  })
+})
+
+test("permission APIs: list and reply call expected routes", async () => {
+  const requests: Array<{ url: string; method: string; body?: string }> = []
+  const originalFetch = globalThis.fetch
+
+  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    requests.push({
+      url: String(input),
+      method: init?.method || "GET",
+      body: typeof init?.body === "string" ? init.body : undefined,
+    })
+    if (String(input).endsWith("/permission")) {
+      return new Response(
+        JSON.stringify([
+          {
+            id: "permission_1",
+            sessionID: "session_1",
+            permission: "edit",
+            patterns: ["src/**"],
+            metadata: {},
+            always: ["src/**"],
+          },
+        ]),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      )
+    }
+    return new Response("true", { status: 200, headers: { "Content-Type": "application/json" } })
+  }) as typeof fetch
+
+  try {
+    const list = await listPermissions({
+      serverUrl: "http://127.0.0.1:4096",
+    })
+    assert.equal(list.length, 1)
+    assert.equal(list[0].id, "permission_1")
+
+    await replyPermission({
+      serverUrl: "http://127.0.0.1:4096",
+      requestID: "permission_1",
+      reply: "once",
+    })
+  } finally {
+    globalThis.fetch = originalFetch
+  }
+
+  assert.equal(requests[0].method, "GET")
+  assert.equal(requests[0].url, "http://127.0.0.1:4096/permission")
+  assert.equal(requests[1].method, "POST")
+  assert.equal(requests[1].url, "http://127.0.0.1:4096/permission/permission_1/reply")
+  assert.deepEqual(JSON.parse(requests[1].body || "{}"), {
+    reply: "once",
   })
 })

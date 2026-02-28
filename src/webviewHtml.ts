@@ -104,6 +104,7 @@ export function createWebviewHtml(input: {
       </div>
       <div class="actions">
         <button class="btn" id="session-menu" type="button">Session</button>
+        <button class="btn" id="review-permissions" type="button">Approvals</button>
         <button class="btn" id="attach-menu" type="button">Attach</button>
         <button class="btn" id="new-session" type="button">New Session</button>
         <button class="btn" id="switch-session" type="button">Switch</button>
@@ -121,6 +122,7 @@ export function createWebviewHtml(input: {
     const status = document.getElementById("status");
     const buttonNewSession = document.getElementById("new-session");
     const buttonSessionMenu = document.getElementById("session-menu");
+    const buttonReviewPermissions = document.getElementById("review-permissions");
     const buttonAttachMenu = document.getElementById("attach-menu");
     const buttonSwitchSession = document.getElementById("switch-session");
     const buttonSendContext = document.getElementById("send-context");
@@ -177,6 +179,10 @@ export function createWebviewHtml(input: {
 
     buttonAttachMenu.addEventListener("click", () => {
       vscode.postMessage({ type: "action-attach-menu" });
+    });
+
+    buttonReviewPermissions.addEventListener("click", () => {
+      vscode.postMessage({ type: "action-review-permissions" });
     });
 
     buttonNewSession.addEventListener("click", () => {

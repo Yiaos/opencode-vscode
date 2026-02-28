@@ -2,6 +2,7 @@ export type SessionMenuActionID =
   | "new"
   | "switch"
   | "compact"
+  | "review-permissions"
   | "attach-file"
   | "attach-symbol"
   | "attach-diff"
@@ -18,6 +19,7 @@ export const SESSION_ACTION_ITEMS: Array<{ label: string; id: SessionMenuActionI
   { label: "New Session", id: "new" },
   { label: "Switch Session", id: "switch" },
   { label: "Compact Session", id: "compact" },
+  { label: "Review Pending Permissions", id: "review-permissions" },
   { label: "Attach File Context", id: "attach-file" },
   { label: "Attach Symbol Context", id: "attach-symbol" },
   { label: "Attach Git Diff Context", id: "attach-diff" },

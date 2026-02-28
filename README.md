@@ -13,6 +13,7 @@ A standalone GUI extension located in `vsocode`.
   - Switch Session (quick picker)
   - Session Actions menu (rename/delete/fork/share/unshare/compact/stop)
   - Compact Session (AI summarize)
+  - Review pending permissions (allow once / always allow / reject)
   - Attach context: active file/selection, workspace file, workspace symbol, git diff
   - Explorer right-click attach (single file or multi-select files)
   - Refresh GUI

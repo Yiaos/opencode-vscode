@@ -5,9 +5,11 @@ import {
   createSession,
   forkSession as apiForkSession,
   listConfigProviders,
+  listPermissions,
   listSessions,
   pickActiveSession,
   promptSessionWithText,
+  replyPermission,
   removeSession,
   renameSession as apiRenameSession,
   shareSession as apiShareSession,
@@ -236,6 +238,66 @@ export class ProviderSessionActions {
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error)
       await vscode.window.showErrorMessage(`Failed to compact session: ${message}`)
+    }
+  }
+
+  async reviewPermissions() {
+    try {
+      const serverUrl = await this.host.ensureServerRunning()
+      const pending = await listPermissions({
+        serverUrl,
+        auth: this.host.serverAuth(),
+      })
+      if (pending.length === 0) {
+        await vscode.window.showInformationMessage("No pending permissions")
+        return
+      }
+
+      const picked = await vscode.window.showQuickPick(
+        pending.map((item) => ({
+          label: item.permission,
+          description: item.sessionID,
+          detail: item.patterns.join(", ") || "No patterns",
+          permission: item,
+        })),
+        {
+          title: "Pending Permissions",
+          matchOnDescription: true,
+          matchOnDetail: true,
+        },
+      )
+      if (!picked) return
+
+      const action = await vscode.window.showQuickPick(
+        [
+          { label: "Allow Once", id: "once" as const },
+          { label: "Always Allow", id: "always" as const },
+          { label: "Reject", id: "reject" as const },
+        ],
+        { title: `Permission: ${picked.permission.permission}` },
+      )
+      if (!action) return
+
+      let message: string | undefined
+      if (action.id === "reject") {
+        message = await vscode.window.showInputBox({
+          title: "Reject Permission",
+          prompt: "Optional reason",
+          placeHolder: "Reason (optional)",
+        })
+      }
+
+      await replyPermission({
+        serverUrl,
+        auth: this.host.serverAuth(),
+        requestID: picked.permission.id,
+        reply: action.id,
+        message: message?.trim() || undefined,
+      })
+      await vscode.window.showInformationMessage(`Permission replied: ${action.id}`)
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      await vscode.window.showErrorMessage(`Failed to review permissions: ${message}`)
     }
   }
 

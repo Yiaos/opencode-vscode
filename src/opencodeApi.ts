@@ -27,6 +27,21 @@ export type ConfigProviders = {
   default: Record<string, string>
 }
 
+export type PermissionRequest = {
+  id: string
+  sessionID: string
+  permission: string
+  patterns: string[]
+  metadata: Record<string, unknown>
+  always: string[]
+  tool?: {
+    messageID: string
+    callID: string
+  }
+}
+
+export type PermissionReply = "once" | "always" | "reject"
+
 export type ServerAuth = {
   username?: string
   password?: string
@@ -106,6 +121,36 @@ function toConfigProviders(data: unknown): ConfigProviders {
   }
 
   return { providers, default: defaults }
+}
+
+function toPermissionRequest(data: unknown): PermissionRequest {
+  if (!data || typeof data !== "object") {
+    throw new Error("Invalid permission response")
+  }
+  const value = data as Record<string, unknown>
+  if (typeof value.id !== "string") throw new Error("Invalid permission response")
+  if (typeof value.sessionID !== "string") throw new Error("Invalid permission response")
+  if (typeof value.permission !== "string") throw new Error("Invalid permission response")
+
+  return {
+    id: value.id,
+    sessionID: value.sessionID,
+    permission: value.permission,
+    patterns: Array.isArray(value.patterns) ? value.patterns.filter((x): x is string => typeof x === "string") : [],
+    metadata: value.metadata && typeof value.metadata === "object" ? (value.metadata as Record<string, unknown>) : {},
+    always: Array.isArray(value.always) ? value.always.filter((x): x is string => typeof x === "string") : [],
+    tool:
+      value.tool && typeof value.tool === "object"
+        ? {
+            messageID: typeof (value.tool as { messageID?: unknown }).messageID === "string"
+              ? (value.tool as { messageID: string }).messageID
+              : "",
+            callID: typeof (value.tool as { callID?: unknown }).callID === "string"
+              ? (value.tool as { callID: string }).callID
+              : "",
+          }
+        : undefined,
+  }
 }
 
 function headers(input: { auth?: ServerAuth; directory?: string; extra?: Record<string, string> }) {
@@ -314,6 +359,43 @@ export async function listConfigProviders(input: {
   if (!response.ok) throw new Error(`HTTP ${response.status}`)
   const data = await response.json()
   return toConfigProviders(data)
+}
+
+export async function listPermissions(input: {
+  serverUrl: string
+  auth?: ServerAuth
+}): Promise<PermissionRequest[]> {
+  const response = await fetch(`${input.serverUrl}/permission`, {
+    headers: headers({
+      auth: input.auth,
+    }),
+  })
+  if (!response.ok) throw new Error(`HTTP ${response.status}`)
+  const data = await response.json()
+  if (!Array.isArray(data)) throw new Error("Invalid permission list response")
+  return data.map((item) => toPermissionRequest(item))
+}
+
+export async function replyPermission(input: {
+  serverUrl: string
+  auth?: ServerAuth
+  requestID: string
+  reply: PermissionReply
+  message?: string
+}) {
+  const response = await fetch(`${input.serverUrl}/permission/${input.requestID}/reply`, {
+    method: "POST",
+    headers: headers({
+      auth: input.auth,
+      extra: { "Content-Type": "application/json" },
+    }),
+    body: JSON.stringify({
+      reply: input.reply,
+      message: input.message,
+    }),
+  })
+  if (!response.ok) throw new Error(`HTTP ${response.status}`)
+  return response
 }
 
 export async function unshareSession(input: {
