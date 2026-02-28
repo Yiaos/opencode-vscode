@@ -25,12 +25,14 @@ import {
   VIEW_CONTAINER_ID,
   VIEW_ID,
 } from "./constants"
-import type { ServerAuth } from "./opencodeApi"
+import { listPermissions, type ServerAuth } from "./opencodeApi"
 import { ProviderContextActions } from "./providerContext"
 import { SESSION_ACTION_ITEMS } from "./providerMenus"
 import { ProviderSessionActions } from "./providerSessions"
 import { ServerManager } from "./serverManager"
+import { ServerEventsClient, type GlobalEventEnvelope } from "./serverEvents"
 import { buildSessionUrl, parseSessionUrl, type SessionInfo } from "./sessionUrl"
+import { buildStatusBarState, type SessionRuntimeState } from "./statusBarState"
 import { createNonce, createWebviewHtml } from "./webviewHtml"
 
 export class OpencodeGuiViewProvider implements vscode.WebviewViewProvider, vscode.Disposable {
@@ -40,10 +42,14 @@ export class OpencodeGuiViewProvider implements vscode.WebviewViewProvider, vsco
   private readonly output: vscode.OutputChannel
   private readonly server: ServerManager
   private readonly status: vscode.StatusBarItem
+  private readonly events: ServerEventsClient
   private readonly attachedWebviews = new WeakSet<vscode.Webview>()
   private readonly sessions: ProviderSessionActions
   private readonly contextActions: ProviderContextActions
   private activeSession?: SessionInfo
+  private connectedServerUrl?: string
+  private pendingPermissions = 0
+  private sessionState: SessionRuntimeState = "idle"
 
   constructor(private readonly context: vscode.ExtensionContext) {
     this.output = vscode.window.createOutputChannel("OpenCode GUI")
@@ -65,9 +71,12 @@ export class OpencodeGuiViewProvider implements vscode.WebviewViewProvider, vsco
     this.status = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100)
     this.status.name = "OpenCode GUI"
     this.status.command = COMMAND_OPEN
-    this.status.text = "$(globe) OpenCode GUI"
-    this.status.tooltip = "Open OpenCode GUI"
     this.status.show()
+    this.events = new ServerEventsClient({
+      onEvent: (event) => this.handleServerEvent(event),
+      onLog: (line) => this.output.appendLine(line),
+    })
+    this.updateStatusBar()
 
     const saved = this.context.workspaceState.get<SessionInfo>(OpencodeGuiViewProvider.ACTIVE_SESSION_KEY)
     if (saved?.id && saved?.directory) {
@@ -152,7 +161,7 @@ export class OpencodeGuiViewProvider implements vscode.WebviewViewProvider, vsco
     if (picked.id === "new") return this.sessions.newSession()
     if (picked.id === "switch") return this.sessions.switchSession()
     if (picked.id === "compact") return this.sessions.compactSession()
-    if (picked.id === "review-permissions") return this.sessions.reviewPermissions()
+    if (picked.id === "review-permissions") return this.reviewPermissions()
     if (picked.id === "attach-file") return this.contextActions.attachFileContext()
     if (picked.id === "attach-symbol") return this.contextActions.attachSymbolContext()
     if (picked.id === "attach-diff") return this.contextActions.attachGitDiffContext()
@@ -171,7 +180,7 @@ export class OpencodeGuiViewProvider implements vscode.WebviewViewProvider, vsco
       vscode.commands.registerCommand(COMMAND_REFRESH, async () => this.refresh()),
       vscode.commands.registerCommand(COMMAND_NEW_SESSION, async () => this.sessions.newSession()),
       vscode.commands.registerCommand(COMMAND_SWITCH_SESSION, async () => this.sessions.switchSession()),
-      vscode.commands.registerCommand(COMMAND_REVIEW_PERMISSIONS, async () => this.sessions.reviewPermissions()),
+      vscode.commands.registerCommand(COMMAND_REVIEW_PERMISSIONS, async () => this.reviewPermissions()),
       vscode.commands.registerCommand(COMMAND_SESSION_ACTIONS, async () => this.sessionActionsMenu()),
       vscode.commands.registerCommand(COMMAND_RENAME_SESSION, async () => this.sessions.renameSession()),
       vscode.commands.registerCommand(COMMAND_DELETE_SESSION, async () => this.sessions.deleteSession()),
@@ -193,6 +202,7 @@ export class OpencodeGuiViewProvider implements vscode.WebviewViewProvider, vsco
   }
 
   dispose() {
+    this.events.stop()
     void this.server.dispose()
     this.output.dispose()
     this.status.dispose()
@@ -236,7 +246,7 @@ export class OpencodeGuiViewProvider implements vscode.WebviewViewProvider, vsco
         void this.sessionActionsMenu()
       }
       if (message.type === "action-review-permissions") {
-        void this.sessions.reviewPermissions()
+        void this.reviewPermissions()
       }
       if (message.type === "action-attach-menu") {
         void this.contextActions.attachActions()
@@ -266,8 +276,9 @@ export class OpencodeGuiViewProvider implements vscode.WebviewViewProvider, vsco
     webview.html = this.loadingHtml("Starting OpenCode server...")
     try {
       const serverUrl = await this.server.ensureRunning()
-      this.status.text = "$(globe) OpenCode GUI Connected"
-      this.status.tooltip = serverUrl
+      this.connectedServerUrl = serverUrl
+      this.ensureEventStream(serverUrl)
+      this.updateStatusBar()
       const nonce = createNonce()
       webview.html = createWebviewHtml({
         cspSource: webview.cspSource,
@@ -283,8 +294,9 @@ export class OpencodeGuiViewProvider implements vscode.WebviewViewProvider, vsco
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error)
       this.output.appendLine(`[server] start failed: ${message}`)
-      this.status.text = "$(warning) OpenCode GUI Error"
-      this.status.tooltip = message
+      this.connectedServerUrl = undefined
+      this.sessionState = "error"
+      this.updateStatusBar()
       webview.html = this.loadingHtml(`Failed to start OpenCode server\n${message}`)
       await vscode.window.showErrorMessage(`OpenCode GUI failed to start: ${message}`)
     }
@@ -325,10 +337,103 @@ export class OpencodeGuiViewProvider implements vscode.WebviewViewProvider, vsco
 
   private setActiveSession(session: SessionInfo | undefined) {
     this.activeSession = session
+    this.sessionState = "idle"
     if (!session) {
       void this.context.workspaceState.update(OpencodeGuiViewProvider.ACTIVE_SESSION_KEY, undefined)
+      this.updateStatusBar()
       return
     }
     void this.context.workspaceState.update(OpencodeGuiViewProvider.ACTIVE_SESSION_KEY, session)
+    this.updateStatusBar()
+  }
+
+  private async reviewPermissions() {
+    await this.sessions.reviewPermissions()
+    await this.refreshPendingPermissions()
+  }
+
+  private ensureEventStream(serverUrl: string) {
+    this.events.start({
+      serverUrl,
+      auth: this.serverAuth(),
+    })
+    void this.refreshPendingPermissions()
+  }
+
+  private async refreshPendingPermissions() {
+    if (!this.connectedServerUrl) return
+    try {
+      const pending = await listPermissions({
+        serverUrl: this.connectedServerUrl,
+        auth: this.serverAuth(),
+      })
+      this.pendingPermissions = pending.length
+      this.updateStatusBar()
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      this.output.appendLine(`[permission] refresh failed: ${message}`)
+    }
+  }
+
+  private handleServerEvent(event: GlobalEventEnvelope) {
+    const payload = event.payload
+    if (!payload || typeof payload.type !== "string") return
+
+    if (
+      payload.type === "permission.asked" ||
+      payload.type === "permission.replied" ||
+      payload.type === "permission.updated"
+    ) {
+      void this.refreshPendingPermissions()
+      return
+    }
+
+    if (payload.type === "session.status") {
+      const properties = payload.properties || {}
+      const sessionID = typeof properties.sessionID === "string" ? properties.sessionID : undefined
+      if (!this.isActiveSession(sessionID)) return
+
+      const rawStatus = properties.status
+      if (rawStatus && typeof rawStatus === "object") {
+        const kind = (rawStatus as { type?: unknown }).type
+        if (kind === "busy" || kind === "retry" || kind === "idle") {
+          this.sessionState = kind
+          this.updateStatusBar()
+        }
+      }
+      return
+    }
+
+    if (payload.type === "session.idle") {
+      const properties = payload.properties || {}
+      const sessionID = typeof properties.sessionID === "string" ? properties.sessionID : undefined
+      if (!this.isActiveSession(sessionID)) return
+      this.sessionState = "idle"
+      this.updateStatusBar()
+      return
+    }
+
+    if (payload.type === "session.error") {
+      const properties = payload.properties || {}
+      const sessionID = typeof properties.sessionID === "string" ? properties.sessionID : undefined
+      if (sessionID && !this.isActiveSession(sessionID)) return
+      this.sessionState = "error"
+      this.updateStatusBar()
+    }
+  }
+
+  private isActiveSession(sessionID?: string) {
+    return !!sessionID && this.activeSession?.id === sessionID
+  }
+
+  private updateStatusBar() {
+    const state = buildStatusBarState({
+      connected: !!this.connectedServerUrl,
+      serverUrl: this.connectedServerUrl,
+      sessionState: this.sessionState,
+      pendingPermissions: this.pendingPermissions,
+    })
+    this.status.text = state.text
+    this.status.tooltip = state.tooltip
   }
 }

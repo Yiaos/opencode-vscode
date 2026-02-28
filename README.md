@@ -14,6 +14,7 @@ A standalone GUI extension located in `vsocode`.
   - Session Actions menu (rename/delete/fork/share/unshare/compact/stop)
   - Compact Session (AI summarize)
   - Review pending permissions (allow once / always allow / reject)
+  - Real-time status sync in status bar (session state + pending approvals badge)
   - Attach context: active file/selection, workspace file, workspace symbol, git diff
   - Explorer right-click attach (single file or multi-select files)
   - Refresh GUI
