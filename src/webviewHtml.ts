@@ -108,6 +108,10 @@ export function createWebviewHtml(input: {
         <button class="btn" id="attach-menu" type="button">Attach</button>
         <button class="btn" id="new-session" type="button">New Session</button>
         <button class="btn" id="switch-session" type="button">Switch</button>
+        <button class="btn" id="show-todo" type="button">Todo</button>
+        <button class="btn" id="show-diff" type="button">Diff</button>
+        <button class="btn" id="run-command" type="button">Slash</button>
+        <button class="btn" id="run-shell" type="button">Shell</button>
         <button class="btn" id="send-context" type="button">Send Context</button>
         <button class="btn" id="abort-session" type="button">Stop</button>
         <button class="btn" id="open-reference" type="button">Open Ref</button>
@@ -125,6 +129,10 @@ export function createWebviewHtml(input: {
     const buttonReviewPermissions = document.getElementById("review-permissions");
     const buttonAttachMenu = document.getElementById("attach-menu");
     const buttonSwitchSession = document.getElementById("switch-session");
+    const buttonShowTodo = document.getElementById("show-todo");
+    const buttonShowDiff = document.getElementById("show-diff");
+    const buttonRunCommand = document.getElementById("run-command");
+    const buttonRunShell = document.getElementById("run-shell");
     const buttonSendContext = document.getElementById("send-context");
     const buttonAbortSession = document.getElementById("abort-session");
     const buttonOpenReference = document.getElementById("open-reference");
@@ -191,6 +199,22 @@ export function createWebviewHtml(input: {
 
     buttonSwitchSession.addEventListener("click", () => {
       vscode.postMessage({ type: "action-switch-session" });
+    });
+
+    buttonShowTodo.addEventListener("click", () => {
+      vscode.postMessage({ type: "action-show-todo" });
+    });
+
+    buttonShowDiff.addEventListener("click", () => {
+      vscode.postMessage({ type: "action-show-diff" });
+    });
+
+    buttonRunCommand.addEventListener("click", () => {
+      vscode.postMessage({ type: "action-run-command" });
+    });
+
+    buttonRunShell.addEventListener("click", () => {
+      vscode.postMessage({ type: "action-run-shell" });
     });
 
     buttonSendContext.addEventListener("click", () => {

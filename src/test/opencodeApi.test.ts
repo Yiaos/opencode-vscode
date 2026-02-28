@@ -3,12 +3,16 @@ import assert from "node:assert/strict"
 import {
   createAuthHeader,
   forkSession,
+  getSessionDiff,
   listConfigProviders,
   listPermissions,
+  listSessionTodos,
   pickActiveSession,
   replyPermission,
   removeSession,
   renameSession,
+  runSessionCommand,
+  runSessionShell,
   shareSession,
   summarizeSession,
   unshareSession,
@@ -228,5 +232,80 @@ test("permission APIs: list and reply call expected routes", async () => {
   assert.equal(requests[1].url, "http://127.0.0.1:4096/permission/permission_1/reply")
   assert.deepEqual(JSON.parse(requests[1].body || "{}"), {
     reply: "once",
+  })
+})
+
+test("session runtime APIs: todo/diff/command/shell routes", async () => {
+  const requests: Array<{ url: string; method: string; body?: string }> = []
+  const originalFetch = globalThis.fetch
+
+  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = String(input)
+    requests.push({
+      url,
+      method: init?.method || "GET",
+      body: typeof init?.body === "string" ? init.body : undefined,
+    })
+    if (url.includes("/todo")) {
+      return new Response(
+        JSON.stringify([{ id: "todo_1", content: "x", status: "pending", priority: "medium" }]),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      )
+    }
+    if (url.includes("/diff")) {
+      return new Response(JSON.stringify([{ file: "a.ts" }]), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      })
+    }
+    return new Response("true", { status: 200, headers: { "Content-Type": "application/json" } })
+  }) as typeof fetch
+
+  try {
+    const todos = await listSessionTodos({
+      serverUrl: "http://127.0.0.1:4096",
+      sessionID: "s1",
+    })
+    assert.equal(todos.length, 1)
+
+    const diff = await getSessionDiff({
+      serverUrl: "http://127.0.0.1:4096",
+      sessionID: "s1",
+      messageID: "m1",
+    })
+    assert.equal(diff.length, 1)
+
+    await runSessionCommand({
+      serverUrl: "http://127.0.0.1:4096",
+      sessionID: "s1",
+      command: "summarize",
+      arguments: "src/index.ts",
+    })
+    await runSessionShell({
+      serverUrl: "http://127.0.0.1:4096",
+      sessionID: "s1",
+      command: "git status",
+      agent: "build",
+    })
+  } finally {
+    globalThis.fetch = originalFetch
+  }
+
+  assert.deepEqual(
+    requests.map((item) => `${item.method} ${item.url}`),
+    [
+      "GET http://127.0.0.1:4096/session/s1/todo",
+      "GET http://127.0.0.1:4096/session/s1/diff?messageID=m1",
+      "POST http://127.0.0.1:4096/session/s1/command",
+      "POST http://127.0.0.1:4096/session/s1/shell",
+    ],
+  )
+  assert.deepEqual(JSON.parse(requests[2].body || "{}"), {
+    command: "summarize",
+    arguments: "src/index.ts",
+  })
+  assert.deepEqual(JSON.parse(requests[3].body || "{}"), {
+    command: "git status",
+    agent: "build",
   })
 })

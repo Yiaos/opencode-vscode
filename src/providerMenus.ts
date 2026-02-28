@@ -3,6 +3,10 @@ export type SessionMenuActionID =
   | "switch"
   | "compact"
   | "review-permissions"
+  | "todo"
+  | "diff"
+  | "command"
+  | "shell"
   | "attach-file"
   | "attach-symbol"
   | "attach-diff"
@@ -20,6 +24,10 @@ export const SESSION_ACTION_ITEMS: Array<{ label: string; id: SessionMenuActionI
   { label: "Switch Session", id: "switch" },
   { label: "Compact Session", id: "compact" },
   { label: "Review Pending Permissions", id: "review-permissions" },
+  { label: "Show Session Todo", id: "todo" },
+  { label: "Show Session Diff", id: "diff" },
+  { label: "Run Session Command", id: "command" },
+  { label: "Run Session Shell", id: "shell" },
   { label: "Attach File Context", id: "attach-file" },
   { label: "Attach Symbol Context", id: "attach-symbol" },
   { label: "Attach Git Diff Context", id: "attach-diff" },

@@ -42,6 +42,17 @@ export type PermissionRequest = {
 
 export type PermissionReply = "once" | "always" | "reject"
 
+export type SessionTodo = {
+  id: string
+  content: string
+  status: string
+  priority: string
+}
+
+export type SessionFileDiff = {
+  [key: string]: unknown
+}
+
 export type ServerAuth = {
   username?: string
   password?: string
@@ -150,6 +161,21 @@ function toPermissionRequest(data: unknown): PermissionRequest {
               : "",
           }
         : undefined,
+  }
+}
+
+function toSessionTodo(data: unknown): SessionTodo {
+  if (!data || typeof data !== "object") throw new Error("Invalid todo response")
+  const value = data as Record<string, unknown>
+  if (typeof value.id !== "string") throw new Error("Invalid todo response")
+  if (typeof value.content !== "string") throw new Error("Invalid todo response")
+  if (typeof value.status !== "string") throw new Error("Invalid todo response")
+  if (typeof value.priority !== "string") throw new Error("Invalid todo response")
+  return {
+    id: value.id,
+    content: value.content,
+    status: value.status,
+    priority: value.priority,
   }
 }
 
@@ -392,6 +418,99 @@ export async function replyPermission(input: {
     body: JSON.stringify({
       reply: input.reply,
       message: input.message,
+    }),
+  })
+  if (!response.ok) throw new Error(`HTTP ${response.status}`)
+  return response
+}
+
+export async function listSessionTodos(input: {
+  serverUrl: string
+  auth?: ServerAuth
+  directory?: string
+  sessionID: string
+}): Promise<SessionTodo[]> {
+  const response = await fetch(`${input.serverUrl}/session/${input.sessionID}/todo`, {
+    headers: headers({
+      auth: input.auth,
+      directory: input.directory,
+    }),
+  })
+  if (!response.ok) throw new Error(`HTTP ${response.status}`)
+  const data = await response.json()
+  if (!Array.isArray(data)) throw new Error("Invalid todo list response")
+  return data.map((item) => toSessionTodo(item))
+}
+
+export async function getSessionDiff(input: {
+  serverUrl: string
+  auth?: ServerAuth
+  directory?: string
+  sessionID: string
+  messageID?: string
+}): Promise<SessionFileDiff[]> {
+  const url = new URL(`${input.serverUrl}/session/${input.sessionID}/diff`)
+  if (input.messageID) url.searchParams.set("messageID", input.messageID)
+  const response = await fetch(url, {
+    headers: headers({
+      auth: input.auth,
+      directory: input.directory,
+    }),
+  })
+  if (!response.ok) throw new Error(`HTTP ${response.status}`)
+  const data = await response.json()
+  if (!Array.isArray(data)) throw new Error("Invalid diff response")
+  return data as SessionFileDiff[]
+}
+
+export async function runSessionCommand(input: {
+  serverUrl: string
+  auth?: ServerAuth
+  directory?: string
+  sessionID: string
+  command: string
+  arguments: string
+  agent?: string
+  model?: string
+  messageID?: string
+}) {
+  const response = await fetch(`${input.serverUrl}/session/${input.sessionID}/command`, {
+    method: "POST",
+    headers: headers({
+      auth: input.auth,
+      directory: input.directory,
+      extra: { "Content-Type": "application/json" },
+    }),
+    body: JSON.stringify({
+      command: input.command,
+      arguments: input.arguments,
+      agent: input.agent,
+      model: input.model,
+      messageID: input.messageID,
+    }),
+  })
+  if (!response.ok) throw new Error(`HTTP ${response.status}`)
+  return response
+}
+
+export async function runSessionShell(input: {
+  serverUrl: string
+  auth?: ServerAuth
+  directory?: string
+  sessionID: string
+  command: string
+  agent: string
+}) {
+  const response = await fetch(`${input.serverUrl}/session/${input.sessionID}/shell`, {
+    method: "POST",
+    headers: headers({
+      auth: input.auth,
+      directory: input.directory,
+      extra: { "Content-Type": "application/json" },
+    }),
+    body: JSON.stringify({
+      command: input.command,
+      agent: input.agent,
     }),
   })
   if (!response.ok) throw new Error(`HTTP ${response.status}`)

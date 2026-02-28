@@ -5,7 +5,7 @@
   "version": "0.1.0",
   "publisher": "local",
   "license": "MIT",
-  "icon": "resources/opencode.svg",
+  "icon": "resources/opencode.png",
   "engines": {
     "vscode": "^1.94.0"
   },
@@ -24,6 +24,10 @@
     "onCommand:opencodeGui.openPanel",
     "onCommand:opencodeGui.switchSession",
     "onCommand:opencodeGui.reviewPermissions",
+    "onCommand:opencodeGui.showSessionTodo",
+    "onCommand:opencodeGui.showSessionDiff",
+    "onCommand:opencodeGui.runSessionCommand",
+    "onCommand:opencodeGui.runSessionShell",
     "onCommand:opencodeGui.sessionActions",
     "onCommand:opencodeGui.renameSession",
     "onCommand:opencodeGui.deleteSession",
@@ -58,6 +62,22 @@
       {
         "command": "opencodeGui.reviewPermissions",
         "title": "OpenCode GUI: Review Pending Permissions"
+      },
+      {
+        "command": "opencodeGui.showSessionTodo",
+        "title": "OpenCode GUI: Show Session Todo"
+      },
+      {
+        "command": "opencodeGui.showSessionDiff",
+        "title": "OpenCode GUI: Show Session Diff"
+      },
+      {
+        "command": "opencodeGui.runSessionCommand",
+        "title": "OpenCode GUI: Run Session Command"
+      },
+      {
+        "command": "opencodeGui.runSessionShell",
+        "title": "OpenCode GUI: Run Session Shell"
       },
       {
         "command": "opencodeGui.sessionActions",
@@ -255,6 +275,34 @@
         "linux": "ctrl+shift+r"
       },
       {
+        "command": "opencodeGui.showSessionTodo",
+        "key": "cmd+alt+t",
+        "mac": "cmd+alt+t",
+        "win": "ctrl+alt+t",
+        "linux": "ctrl+alt+t"
+      },
+      {
+        "command": "opencodeGui.showSessionDiff",
+        "key": "cmd+alt+g",
+        "mac": "cmd+alt+g",
+        "win": "ctrl+alt+g",
+        "linux": "ctrl+alt+g"
+      },
+      {
+        "command": "opencodeGui.runSessionCommand",
+        "key": "cmd+alt+slash",
+        "mac": "cmd+alt+/",
+        "win": "ctrl+alt+/",
+        "linux": "ctrl+alt+/"
+      },
+      {
+        "command": "opencodeGui.runSessionShell",
+        "key": "cmd+alt+shift+enter",
+        "mac": "cmd+alt+shift+enter",
+        "win": "ctrl+alt+shift+enter",
+        "linux": "ctrl+alt+shift+enter"
+      },
+      {
         "command": "opencodeGui.attachFileContext",
         "key": "cmd+alt+f",
         "mac": "cmd+alt+f",
@@ -355,12 +403,18 @@
   },
   "scripts": {
     "vscode:prepublish": "npm run package",
+    "prepare": "npm run setup:hooks",
     "compile": "tsc --noEmit && node esbuild.js",
     "package": "tsc --noEmit && node esbuild.js --production",
+    "package:vsix": "vsce package --allow-missing-repository --no-dependencies -o .artifacts/opencode-gui-vscode.vsix",
     "watch": "node esbuild.js --watch",
-    "test": "tsc --project tsconfig.json --outDir out && node --test out/test/*.test.js"
+    "watch:verify-install": "bash ./scripts/watch-verify-install.sh",
+    "test": "tsc --project tsconfig.json --outDir out && node --test out/test/*.test.js",
+    "setup:hooks": "bash ./scripts/setup-hooks.sh",
+    "verify:install": "bash ./scripts/build-package-install.sh"
   },
   "devDependencies": {
+    "@vscode/vsce": "^3.7.1",
     "@types/node": "20.x",
     "@types/vscode": "^1.94.0",
     "esbuild": "^0.25.3",

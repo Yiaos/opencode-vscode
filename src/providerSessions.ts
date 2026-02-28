@@ -4,19 +4,24 @@ import {
   abortSession,
   createSession,
   forkSession as apiForkSession,
+  getSessionDiff,
   listConfigProviders,
   listPermissions,
   listSessions,
+  listSessionTodos,
   pickActiveSession,
   promptSessionWithText,
   replyPermission,
   removeSession,
   renameSession as apiRenameSession,
+  runSessionCommand,
+  runSessionShell,
   shareSession as apiShareSession,
   summarizeSession as apiSummarizeSession,
   unshareSession as apiUnshareSession,
 } from "./opencodeApi"
 import { buildSessionPickItems } from "./sessionPicker"
+import { parseSessionCommandInput } from "./sessionRuntimeInput"
 import { buildSessionUrl, type SessionInfo } from "./sessionUrl"
 
 type CompactionModel = {
@@ -298,6 +303,150 @@ export class ProviderSessionActions {
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error)
       await vscode.window.showErrorMessage(`Failed to review permissions: ${message}`)
+    }
+  }
+
+  async showSessionTodo() {
+    const session = await this.resolveSessionForAction("Select Session To View Todo")
+    if (!session) return
+
+    try {
+      const serverUrl = await this.host.ensureServerRunning()
+      const todos = await listSessionTodos({
+        serverUrl,
+        auth: this.host.serverAuth(),
+        directory: session.directory,
+        sessionID: session.id,
+      })
+      if (todos.length === 0) {
+        await vscode.window.showInformationMessage("No todos in this session")
+        return
+      }
+
+      await vscode.window.showQuickPick(
+        todos.map((todo) => ({
+          label: `[${todo.status}] ${todo.content}`,
+          description: todo.priority,
+          detail: todo.id,
+        })),
+        {
+          title: `Session Todo (${todos.length})`,
+          matchOnDescription: true,
+          matchOnDetail: true,
+        },
+      )
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      await vscode.window.showErrorMessage(`Failed to load session todo: ${message}`)
+    }
+  }
+
+  async showSessionDiff() {
+    const session = await this.resolveSessionForAction("Select Session To View Diff")
+    if (!session) return
+
+    const messageID = await vscode.window.showInputBox({
+      title: "Session Diff",
+      prompt: "Optional message ID filter",
+      placeHolder: "message_xxx (leave empty for latest)",
+      validateInput: (value) => {
+        if (!value.trim()) return undefined
+        return value.trim().length > 2 ? undefined : "Message ID seems too short"
+      },
+    })
+    if (messageID === undefined) return
+
+    try {
+      const serverUrl = await this.host.ensureServerRunning()
+      const diff = await getSessionDiff({
+        serverUrl,
+        auth: this.host.serverAuth(),
+        directory: session.directory,
+        sessionID: session.id,
+        messageID: messageID?.trim() || undefined,
+      })
+      if (diff.length === 0) {
+        await vscode.window.showInformationMessage("No diff found for this session")
+        return
+      }
+
+      const doc = await vscode.workspace.openTextDocument({
+        content: JSON.stringify(diff, null, 2),
+        language: "json",
+      })
+      await vscode.window.showTextDocument(doc, { preview: false })
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      await vscode.window.showErrorMessage(`Failed to load session diff: ${message}`)
+    }
+  }
+
+  async runSessionCommandAction() {
+    const session = await this.resolveSessionForAction("Select Session To Run Command")
+    if (!session) return
+
+    const raw = await vscode.window.showInputBox({
+      title: "Run Session Command",
+      prompt: "Input command with args. Example: /summarize this file",
+      placeHolder: "/command arguments...",
+      validateInput: (value) => (value.trim() ? undefined : "Command cannot be empty"),
+    })
+    if (!raw) return
+
+    const parsed = parseSessionCommandInput(raw)
+    if (!parsed) return
+
+    try {
+      const serverUrl = await this.host.ensureServerRunning()
+      await runSessionCommand({
+        serverUrl,
+        auth: this.host.serverAuth(),
+        directory: session.directory,
+        sessionID: session.id,
+        command: parsed.command,
+        arguments: parsed.arguments,
+      })
+      await vscode.window.showInformationMessage(`Session command executed: /${parsed.command}`)
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      await vscode.window.showErrorMessage(`Failed to run session command: ${message}`)
+    }
+  }
+
+  async runSessionShellAction() {
+    const session = await this.resolveSessionForAction("Select Session To Run Shell")
+    if (!session) return
+
+    const command = await vscode.window.showInputBox({
+      title: "Run Session Shell",
+      prompt: "Shell command to execute in session context",
+      placeHolder: "git status",
+      validateInput: (value) => (value.trim() ? undefined : "Shell command cannot be empty"),
+    })
+    if (!command) return
+
+    const agent = await vscode.window.showInputBox({
+      title: "Session Shell Agent",
+      prompt: "Agent name",
+      value: "build",
+      validateInput: (value) => (value.trim() ? undefined : "Agent cannot be empty"),
+    })
+    if (!agent) return
+
+    try {
+      const serverUrl = await this.host.ensureServerRunning()
+      await runSessionShell({
+        serverUrl,
+        auth: this.host.serverAuth(),
+        directory: session.directory,
+        sessionID: session.id,
+        command: command.trim(),
+        agent: agent.trim(),
+      })
+      await vscode.window.showInformationMessage("Session shell command executed")
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      await vscode.window.showErrorMessage(`Failed to run session shell: ${message}`)
     }
   }
 

@@ -13,6 +13,10 @@ import {
   COMMAND_OPEN_REFERENCE,
   COMMAND_RENAME_SESSION,
   COMMAND_REVIEW_PERMISSIONS,
+  COMMAND_RUN_SESSION_COMMAND,
+  COMMAND_RUN_SESSION_SHELL,
+  COMMAND_SHOW_SESSION_DIFF,
+  COMMAND_SHOW_SESSION_TODO,
   COMMAND_OPEN_PANEL,
   COMMAND_OPEN,
   COMMAND_REFRESH,
@@ -30,6 +34,7 @@ import { ProviderContextActions } from "./providerContext"
 import { SESSION_ACTION_ITEMS } from "./providerMenus"
 import { ProviderSessionActions } from "./providerSessions"
 import { ServerManager } from "./serverManager"
+import { decideServerEvent } from "./serverEventDecision"
 import { ServerEventsClient, type GlobalEventEnvelope } from "./serverEvents"
 import { buildSessionUrl, parseSessionUrl, type SessionInfo } from "./sessionUrl"
 import { buildStatusBarState, type SessionRuntimeState } from "./statusBarState"
@@ -162,6 +167,10 @@ export class OpencodeGuiViewProvider implements vscode.WebviewViewProvider, vsco
     if (picked.id === "switch") return this.sessions.switchSession()
     if (picked.id === "compact") return this.sessions.compactSession()
     if (picked.id === "review-permissions") return this.reviewPermissions()
+    if (picked.id === "todo") return this.sessions.showSessionTodo()
+    if (picked.id === "diff") return this.sessions.showSessionDiff()
+    if (picked.id === "command") return this.sessions.runSessionCommandAction()
+    if (picked.id === "shell") return this.sessions.runSessionShellAction()
     if (picked.id === "attach-file") return this.contextActions.attachFileContext()
     if (picked.id === "attach-symbol") return this.contextActions.attachSymbolContext()
     if (picked.id === "attach-diff") return this.contextActions.attachGitDiffContext()
@@ -181,6 +190,10 @@ export class OpencodeGuiViewProvider implements vscode.WebviewViewProvider, vsco
       vscode.commands.registerCommand(COMMAND_NEW_SESSION, async () => this.sessions.newSession()),
       vscode.commands.registerCommand(COMMAND_SWITCH_SESSION, async () => this.sessions.switchSession()),
       vscode.commands.registerCommand(COMMAND_REVIEW_PERMISSIONS, async () => this.reviewPermissions()),
+      vscode.commands.registerCommand(COMMAND_SHOW_SESSION_TODO, async () => this.sessions.showSessionTodo()),
+      vscode.commands.registerCommand(COMMAND_SHOW_SESSION_DIFF, async () => this.sessions.showSessionDiff()),
+      vscode.commands.registerCommand(COMMAND_RUN_SESSION_COMMAND, async () => this.sessions.runSessionCommandAction()),
+      vscode.commands.registerCommand(COMMAND_RUN_SESSION_SHELL, async () => this.sessions.runSessionShellAction()),
       vscode.commands.registerCommand(COMMAND_SESSION_ACTIONS, async () => this.sessionActionsMenu()),
       vscode.commands.registerCommand(COMMAND_RENAME_SESSION, async () => this.sessions.renameSession()),
       vscode.commands.registerCommand(COMMAND_DELETE_SESSION, async () => this.sessions.deleteSession()),
@@ -256,6 +269,18 @@ export class OpencodeGuiViewProvider implements vscode.WebviewViewProvider, vsco
       }
       if (message.type === "action-switch-session") {
         void this.sessions.switchSession()
+      }
+      if (message.type === "action-show-todo") {
+        void this.sessions.showSessionTodo()
+      }
+      if (message.type === "action-show-diff") {
+        void this.sessions.showSessionDiff()
+      }
+      if (message.type === "action-run-command") {
+        void this.sessions.runSessionCommandAction()
+      }
+      if (message.type === "action-run-shell") {
+        void this.sessions.runSessionShellAction()
       }
       if (message.type === "action-abort-session") {
         void this.sessions.abortActiveSession()
@@ -376,54 +401,16 @@ export class OpencodeGuiViewProvider implements vscode.WebviewViewProvider, vsco
   }
 
   private handleServerEvent(event: GlobalEventEnvelope) {
-    const payload = event.payload
-    if (!payload || typeof payload.type !== "string") return
-
-    if (
-      payload.type === "permission.asked" ||
-      payload.type === "permission.replied" ||
-      payload.type === "permission.updated"
-    ) {
+    const decision = decideServerEvent({
+      event,
+      activeSession: this.activeSession,
+    })
+    if (decision.refreshPermissions) {
       void this.refreshPendingPermissions()
-      return
     }
-
-    if (payload.type === "session.status") {
-      const properties = payload.properties || {}
-      const sessionID = typeof properties.sessionID === "string" ? properties.sessionID : undefined
-      if (!this.isActiveSession(sessionID)) return
-
-      const rawStatus = properties.status
-      if (rawStatus && typeof rawStatus === "object") {
-        const kind = (rawStatus as { type?: unknown }).type
-        if (kind === "busy" || kind === "retry" || kind === "idle") {
-          this.sessionState = kind
-          this.updateStatusBar()
-        }
-      }
-      return
-    }
-
-    if (payload.type === "session.idle") {
-      const properties = payload.properties || {}
-      const sessionID = typeof properties.sessionID === "string" ? properties.sessionID : undefined
-      if (!this.isActiveSession(sessionID)) return
-      this.sessionState = "idle"
-      this.updateStatusBar()
-      return
-    }
-
-    if (payload.type === "session.error") {
-      const properties = payload.properties || {}
-      const sessionID = typeof properties.sessionID === "string" ? properties.sessionID : undefined
-      if (sessionID && !this.isActiveSession(sessionID)) return
-      this.sessionState = "error"
-      this.updateStatusBar()
-    }
-  }
-
-  private isActiveSession(sessionID?: string) {
-    return !!sessionID && this.activeSession?.id === sessionID
+    if (decision.nextSession) this.setActiveSession(decision.nextSession)
+    if (decision.nextState) this.sessionState = decision.nextState
+    if (decision.nextSession || decision.nextState) this.updateStatusBar()
   }
 
   private updateStatusBar() {
